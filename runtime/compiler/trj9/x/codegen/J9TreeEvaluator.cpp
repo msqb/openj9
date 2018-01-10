@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2017 IBM Corp. and others
+ * Copyright (c) 2000, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -11868,9 +11868,13 @@ static bool inlineObjectHashCode(TR::Node *node, bool isIndirect)
 //    xmm0 = load 16 bytes align constant [923521, 923521, 923521, 923521]
 //    xmm1 = 0
 // SSEloop
-//    xmm2 = load 8 byte value in lower 8 bytes.
+//    xmm2 = uncompressed: load 8 byte value in lower 8 bytes.
+//           compressed: load 4 byte value in lower 4 bytes
 //    xmm1 = xmm1 * xmm0
-//    movzxwd xmm2, xmm2
+//    if(!isCompressed)
+//          movzxwd xmm2, xmm2
+//    else
+//          movzxbd xmm2, xmm2
 //    xmm1 = xmm1 + xmm2
 //    i = i + 4;
 //    cmp i, end -3
@@ -11904,7 +11908,8 @@ static bool
 inlineStringHashCode(
       TR::Node *node,
       bool isIndirect,
-      TR::CodeGenerator *cg)
+      TR::CodeGenerator *cg,
+      bool isCompressed)
    {
    TR::Compilation *comp = cg->comp();
    TR_J9VMBase *fej9 = (TR_J9VMBase *)(comp->fe());
@@ -11965,7 +11970,10 @@ inlineStringHashCode(
       // xmm1 = xmm1 * xmm0
       generateRegRegInstruction(PMULLD, node, xmm1, xmm0, cg);
       // movzxwd xmm2, xmm2
-      generateRegRegInstruction(PMOVZXWD, node, xmm2, xmm2, cg);
+      if(!isCompressed)
+            generateRegRegInstruction(PMOVZXWD, node, xmm2, xmm2, cg);
+      else
+            generateRegRegInstruction(PMOVZXBD, node, xmm2, xmm2, cg);
       // xmm1 = xmm1 + xmm2
       generateRegRegInstruction(PADDD, node, xmm1, xmm2, cg);
 
@@ -12009,11 +12017,20 @@ inlineStringHashCode(
       generateRegRegInstruction(MOV4RegReg, node, tempReg, hashReg, cg);
       generateRegImmInstruction(SHL4RegImm1, node, hashReg, 5, cg);
       generateRegRegInstruction(SUB4RegReg, node, hashReg, tempReg, cg);
-      generateRegMemInstruction(MOVZXReg4Mem2,
-                                node,
-                                tempReg,
-                                generateX86MemoryReference(valueReg, indexReg, 1, TR::Compiler->om.contiguousArrayHeaderSizeInBytes(), cg),
-                                cg);
+
+      if(!isCompressed)
+            generateRegMemInstruction(MOVZXReg4Mem2,
+                                    node,
+                                    tempReg,
+                                    generateX86MemoryReference(valueReg, indexReg, 1, TR::Compiler->om.contiguousArrayHeaderSizeInBytes(), cg),
+                                    cg);
+      else
+            generateRegMemInstruction(MOVZXReg4Mem1,
+                                    node,
+                                    tempReg,
+                                    generateX86MemoryReference(valueReg, indexReg, 1, TR::Compiler->om.contiguousArrayHeaderSizeInBytes(), cg),
+                                    cg);
+
       generateRegRegInstruction(ADD4RegReg, node, hashReg, tempReg, cg);
       generateRegInstruction(INCReg(TR::Compiler->target.is64Bit()), node, indexReg, cg);
       generateRegRegInstruction(CMPRegReg(), node, indexReg, endReg, cg);
@@ -14152,7 +14169,13 @@ bool J9::X86::TreeEvaluator::VMinlineCallEvaluator(
          case TR::java_lang_String_hashCodeImplDecompressed:
             {
             if (!comp->getOption(TR_DisableSIMDStringHashCode) && cg->getX86ProcessorInfo().supportsSSE4_1()&& !TR::Compiler->om.canGenerateArraylets())
-               callWasInlined = inlineStringHashCode(node, isIndirect, cg);
+               callWasInlined = inlineStringHashCode(node, isIndirect, cg, false);
+            break;
+            }
+         case TR::java_lang_String_hashCodeImplCompressed:
+            {
+            if (!comp->getOption(TR_DisableSIMDStringHashCode) && cg->getX86ProcessorInfo().supportsSSE4_1()&& !TR::Compiler->om.canGenerateArraylets())
+               callWasInlined = inlineStringHashCode(node, isIndirect, cg, true);
             break;
             }
          case TR::java_util_concurrent_atomic_AtomicMarkableReference_doubleWordCAS:
