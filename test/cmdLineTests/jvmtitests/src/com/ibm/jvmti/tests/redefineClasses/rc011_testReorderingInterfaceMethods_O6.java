@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1998, 2016 IBM Corp. and others
+ * Copyright (c) 2001, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -19,21 +19,23 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-#include "jclprots.h"
+package com.ibm.jvmti.tests.redefineClasses;
 
-jint JNICALL Java_java_lang_String_getSeed(JNIEnv *env, jclass clazz)
-{
-	U_64 salt = 0;
-	U_32 seed = 0;
-	jarray array = NULL;
+public class rc011_testReorderingInterfaceMethods_O6 implements rc011_testReorderingInterfaceMethods_O5 {
+	public String getFoo() {
+		return "foo";
+	}
 
-	PORT_ACCESS_FROM_ENV(env);
+	public String getBar() {
+		return "bar";
+	}
 
-	array = (*env)->NewBooleanArray(env, 1);
-	salt = j9time_hires_clock();
-	salt ^= (U_64)(UDATA)(((J9VMThread*) env)->javaVM);
-	salt ^= (U_64)(UDATA)array;
-	seed = (U_32) (salt & (((U_64)1L << 32) - 1));
-	seed ^= (salt >> 32);
-	return (jint)seed;
+	public String getFoo2() {
+		return "foo2";
+	}
+
+	public String getBar2() {
+		return "bar2";
+	}
+
 }
