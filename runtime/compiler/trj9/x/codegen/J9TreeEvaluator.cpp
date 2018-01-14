@@ -11962,11 +11962,19 @@ inlineStringHashCode(
       generateRegRegInstruction(XORPSRegReg, node, xmm1, xmm1, cg);
 
       generateLabelInstruction(LABEL, node, SSELabel, cg);
-      generateRegMemInstruction(MOVSDRegMem,
-                                node,
-                                xmm2,
-                                generateX86MemoryReference(valueReg, indexReg, 1, TR::Compiler->om.contiguousArrayHeaderSizeInBytes(), cg),
-                                cg);
+
+      if(!isCompressed)
+            generateRegMemInstruction(MOVSDRegMem,
+                                    node,
+                                    xmm2,
+                                    generateX86MemoryReference(valueReg, indexReg, 1, TR::Compiler->om.contiguousArrayHeaderSizeInBytes(), cg),
+                                    cg);
+      else
+            generateRegMemInstruction(MOVSSRegMem,
+                                    node,
+                                    xmm2,
+                                    generateX86MemoryReference(valueReg, indexReg, 1, TR::Compiler->om.contiguousArrayHeaderSizeInBytes(), cg),
+                                    cg);
       // xmm1 = xmm1 * xmm0
       generateRegRegInstruction(PMULLD, node, xmm1, xmm0, cg);
       // movzxwd xmm2, xmm2
