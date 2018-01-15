@@ -11973,7 +11973,7 @@ inlineStringHashCode(
             generateRegMemInstruction(MOVSSRegMem,
                                     node,
                                     xmm2,
-                                    generateX86MemoryReference(valueReg, indexReg, 1, TR::Compiler->om.contiguousArrayHeaderSizeInBytes(), cg),
+                                    generateX86MemoryReference(valueReg, indexReg, 0, TR::Compiler->om.contiguousArrayHeaderSizeInBytes(), cg),
                                     cg);
       // xmm1 = xmm1 * xmm0
       generateRegRegInstruction(PMULLD, node, xmm1, xmm0, cg);
@@ -12036,7 +12036,7 @@ inlineStringHashCode(
             generateRegMemInstruction(MOVZXReg4Mem1,
                                     node,
                                     tempReg,
-                                    generateX86MemoryReference(valueReg, indexReg, 1, TR::Compiler->om.contiguousArrayHeaderSizeInBytes(), cg),
+                                    generateX86MemoryReference(valueReg, indexReg, 0, TR::Compiler->om.contiguousArrayHeaderSizeInBytes(), cg),
                                     cg);
 
       generateRegRegInstruction(ADD4RegReg, node, hashReg, tempReg, cg);
