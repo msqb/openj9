@@ -2800,7 +2800,21 @@ public StringBuilder append(CharSequence sequence, int start, int end) {
 	if (sequence == null) {
 		return append(String.valueOf(sequence), start, end);
 	} else if (sequence instanceof String) {
-		return append(((String)sequence).substring(start, end));
+		if (start >= 0 && end >= 0 && start <= end && end <= ((String) sequence).lengthInternal()) {
+			int newLength = lengthInternal() + end - start;
+
+			if (newLength > capacityInternal()) {
+				ensureCapacityImpl(newLength);
+			}
+
+			for (int i = start; i < end; ++i) {
+				append(((String) sequence).charAtInternal(i));
+			}
+			
+			return this;
+		} else {
+			throw new IndexOutOfBoundsException();
+		}
 	} else if (start >= 0 && end >= 0 && start <= end && end <= sequence.length()) {
 		if (sequence instanceof StringBuffer) {
 			synchronized (sequence) {
