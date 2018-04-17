@@ -2796,22 +2796,65 @@ public StringBuilder append(CharSequence sequence) {
  * @exception	IndexOutOfBoundsException when <code>start < 0, start > end</code> or
  *				<code>end > length()</code>
  */
+// TODO
 public StringBuilder append(CharSequence sequence, int start, int end) {
 	if (sequence == null) {
 		return append(String.valueOf(sequence), start, end);
 	} else if (sequence instanceof String) {
 		if (start >= 0 && end >= 0 && start <= end && end <= ((String) sequence).lengthInternal()) {
+
+			int currentLength = lengthInternal();
+			int currentCapacity = capacityInternal();
+			
 			int newLength = lengthInternal() + end - start;
+			
+			if (String.enableCompression) {
 
-			if (newLength > capacityInternal()) {
-				ensureCapacityImpl(newLength);
-			}
+				// Check if the StringBuilder is compressed
+				if (count >= 0) {
+					decompress(newLength);
+				}
+				
+				if (newLength > currentCapacity) {
+					ensureCapacityImpl(newLength);
+				}
+				
+				/*[IF Sidecar19-SE]*/
+				for (int i = start; i < end; ++i) {
+					helpers.putCharInArrayByIndex(value, currentLength, ((String) sequence).charAtInternal(i));
+					++currentLength;
+				}
+				/*[ELSE]*/
+				for (int i = start; i < end; ++i) {
+					value[currentLength] = ((String) sequence).charAtInternal(i);
+					++currentLength;
+				}
+				/*[ENDIF]*/
+				
+				count = newLength | uncompressedBit;
+			
+			} else {
+				if (newLength > currentCapacity) {
+					ensureCapacityImpl(newLength);
+				}
+				
+				/*[IF Sidecar19-SE]*/
+				for (int i = start; i < end; ++i) {
+					helpers.putCharInArrayByIndex(value, currentLength, ((String) sequence).charAtInternal(i));
+					++currentLength;
+				}
+				/*[ELSE]*/
+				for (int i = start; i < end; ++i) {
+					value[currentLength] = ((String) sequence).charAtInternal(i);
+					++currentLength;
+				}
+				/*[ENDIF]*/
 
-			for (int i = start; i < end; ++i) {
-				append(((String) sequence).charAtInternal(i));
+				count = newLength;
 			}
 			
 			return this;
+			
 		} else {
 			throw new IndexOutOfBoundsException();
 		}
